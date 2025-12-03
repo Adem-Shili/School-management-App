@@ -97,11 +97,4 @@ The backend is a secure, robust API layer designed with clean architecture and m
 
 ***
 
-## 🤝 Version Control Standards
 
-This project adheres to the following Git standards:
-
-* **Multiple Small Commits:** Changes are always broken down into small, single-purpose commits.
-* **Clean Commit Messages:** Commit messages are descriptive and follow conventions (e.g., `feat:`, `fix:`, `style:`)
-
-### Example Commit Log
