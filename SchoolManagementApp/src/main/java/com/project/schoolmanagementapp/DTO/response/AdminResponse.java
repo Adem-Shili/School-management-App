@@ -6,6 +6,6 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AdminResponse {
-    private Long id;
+    private int id;
     private String name;
 }

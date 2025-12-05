@@ -1,5 +1,7 @@
 package com.project.schoolmanagementapp.security;
 
+import com.project.schoolmanagementapp.entities.Admin;
+import com.project.schoolmanagementapp.repositories.AdminRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -7,17 +9,19 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 
 @Component
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final AdminRepository adminRepository;
 
     @Override
     protected void doFilterInternal(
@@ -29,17 +33,25 @@ public class JwtFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
 
         if (header != null && header.startsWith("Bearer ")) {
+
             String token = header.substring(7);
-            String username = jwtService.extractUsername(token);
+            String name = jwtService.extractUsername(token); // actually name
 
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(
-                            username,
-                            null,
-                            Collections.emptyList()
-                    );
+            var adminOpt = adminRepository.findByName(name);
 
-            SecurityContextHolder.getContext().setAuthentication(auth);
+            if (adminOpt.isPresent() && jwtService.isTokenValid(token, adminOpt.get())) {
+
+                Admin admin = adminOpt.get();
+
+                UsernamePasswordAuthenticationToken auth =
+                        new UsernamePasswordAuthenticationToken(
+                                admin,
+                                null,
+                                admin.getAuthorities()
+                        );
+
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
         }
 
         filterChain.doFilter(request, response);

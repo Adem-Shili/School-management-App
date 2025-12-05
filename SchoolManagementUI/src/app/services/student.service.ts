@@ -1,8 +1,26 @@
-// src/app/services/student.service.ts
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { AuthService } from './auth.service';
+
+// Define the core Student entity structure
+export interface Student {
+  id?: number;
+  name: string;
+  level: 'commun' | 'specialite' | 'terminal';
+}
+
+
+// Define the expected backend response structure for a paginated list
+export interface StudentPage {
+    content: Student[];
+    totalPages: number;
+    totalElements: number;
+    number: number; // Current page (0-indexed)
+    size: number;
+    first: boolean;
+    last: boolean;
+}
+
 
 @Injectable({
   providedIn: 'root'
@@ -10,57 +28,43 @@ import { AuthService } from './auth.service';
 export class StudentService {
   private apiUrl = 'http://localhost:7070/api/students'; 
   private http = inject(HttpClient);
-  private authService = inject(AuthService);
-
-  private getAuthHeaders(): HttpHeaders {
-    const token = this.authService.getToken();
-    return new HttpHeaders({
-      'Authorization': `Bearer ${token}`
-    });
-  }
 
   // --- CRUD Operations ---
 
-  getAllStudents(search?: string, level?: string, page?: number, size?: number): Observable<any> {
-    const headers = this.getAuthHeaders();
-    let params = {};
+  getAllStudents(search?: string, level?: string, page: number = 0, size: number = 10): Observable<StudentPage> {
+    let params: any = { page: page.toString(), size: size.toString() }; 
+
     if (search) params = { ...params, search };
     if (level) params = { ...params, level };
-    if (page) params = { ...params, page: page.toString() };
-    if (size) params = { ...params, size: size.toString() };
     
-    return this.http.get(this.apiUrl, { headers, params });
+    // The interceptor automatically adds the Authorization header.
+    return this.http.get<StudentPage>(this.apiUrl, { params }); 
   }
 
-  createStudent(studentData: any): Observable<any> {
-    const headers = this.getAuthHeaders();
-    return this.http.post(this.apiUrl, studentData, { headers });
+  createStudent(studentData: Student): Observable<Student> {
+    return this.http.post<Student>(this.apiUrl, studentData);
   }
 
-  updateStudent(id: number, studentData: any): Observable<any> {
-    const headers = this.getAuthHeaders();
-    return this.http.put(`${this.apiUrl}/${id}`, studentData, { headers });
+  updateStudent(id: number, studentData: Student): Observable<Student> {
+    return this.http.put<Student>(`${this.apiUrl}/${id}`, studentData);
   }
 
   deleteStudent(id: number): Observable<void> {
-    const headers = this.getAuthHeaders();
-    return this.http.delete<void>(`${this.apiUrl}/${id}`, { headers });
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
   
   // --- Extra Features ---
 
   exportStudents(): Observable<Blob> {
-      const headers = this.getAuthHeaders();
-      // Ensure your backend returns the CSV/Excel file as a byte stream
-      return this.http.get(`${this.apiUrl}/export`, { headers, responseType: 'blob' });
+      // The interceptor automatically adds headers here.
+      return this.http.get(`${this.apiUrl}/export`, { responseType: 'blob' });
   }
   
   importStudents(file: File): Observable<any> {
-      const headers = this.getAuthHeaders();
       const formData = new FormData();
       formData.append('file', file, file.name);
 
-      // Note: HttpClient automatically sets Content-Type for FormData
-      return this.http.post(`${this.apiUrl}/import`, formData, { headers });
+      // HttpClient sets Content-Type for FormData, interceptor adds Authorization.
+      return this.http.post(`${this.apiUrl}/import`, formData);
   }
 }

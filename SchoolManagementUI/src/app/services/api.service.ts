@@ -1,17 +1,39 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap, map } from 'rxjs';
+
+// Define the shape of the login response
+interface LoginResponse {
+  token: string;
+}
 
 @Injectable({
   providedIn: 'root'
 })
-export class ApiService {
+export class AuthService {
+  private apiUrl = 'http://localhost:7070/api/auth'; // Ensure this matches your Spring Boot AuthController path
+  private http = inject(HttpClient);
+  private TOKEN_KEY = 'auth_token';
 
-  private BASE_URL = 'http://localhost:7070';
+  login(credentials: any): Observable<string> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials).pipe(
+      tap(response => {
+        // Store the token upon successful login
+        localStorage.setItem(this.TOKEN_KEY, response.token);
+      }),
+      map(response => response.token) // Return just the token to the component
+    );
+  }
 
-  constructor(private http: HttpClient) {}
+  logout(): void {
+    localStorage.removeItem(this.TOKEN_KEY);
+  }
 
-  testBackend(): Observable<string> {
-    return this.http.get(this.BASE_URL + '/test', { responseType: 'text' });
+  getToken(): string | null {
+    return localStorage.getItem(this.TOKEN_KEY); // <-- This is the crucial method used by the interceptor
+  }
+
+  isLoggedIn(): boolean {
+    return !!this.getToken();
   }
 }
